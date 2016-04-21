@@ -79,70 +79,80 @@ bool Command::isCommand(std::string const& name)
 Command::OptionSplit Command::splitOptions(std::string options)
 {
     OptionSplit split;
-    bool open = false;
-    bool readOption = false;
-    bool readArgs = false;
-    std::size_t readPos = 0;
-    std::string actualOption = "";
-    std::string actualArg = "";
-    for (std::size_t i = 0; i < options.size(); i++)
+    if (options != "")
     {
-        if (options[i] == '-' && !open)
+        bool open = false;
+        bool readParam = true;
+        bool readOption = false;
+        bool readArgs = false;
+        std::size_t readPos = 0;
+        std::string actualOption = "";
+        for (std::size_t i = 0; i < options.size(); i++)
         {
-            readOption = true;
-            readPos = i;
-        }
-        else if (options[i] == ' ' && readOption == true)
-        {
-            actualOption = options.substr(readPos+1,i-readPos-1);
-            split[actualOption] = {};
-            readOption = false;
-            readArgs = true;
-            readPos = i;
-        }
-        else if (options[i] == ' ' && readArgs && !open)
-        {
-            actualArg = options.substr(readPos+1,i-readPos-1);
-            if (actualArg != "")
+            if (options[i] == ' ' && readParam)
             {
-                if (actualArg[0] == '\"' && actualArg[actualArg.size()-1] == '\"')
+                if (readPos == 0)
                 {
-                    actualArg = actualArg.substr(1,actualArg.size()-2);
+                    split["param"].push_back(options.substr(readPos,i-readPos));
                 }
-                split[actualOption].push_back(actualArg);
+                else
+                {
+                    split["param"].push_back(options.substr(readPos+1,i-readPos-1));
+                }
+                readPos = i;
             }
-            readPos = i;
-        }
-        else if (options[i] == '\"' && readArgs && !open)
-        {
-            open = true;
-        }
-        else if (options[i] == '\"' && readArgs && open)
-        {
-            open = false;
-        }
-        else if (options[i] == '-' && readArgs && !open)
-        {
-            readArgs = false;
-        }
-    }
-    if (readOption)
-    {
-        actualOption = options.substr(readPos+1);
-        split[actualOption] = {};
-        readOption = false;
-        readArgs = false;
-    }
-    else if (readArgs)
-    {
-        actualArg = options.substr(readPos+1);
-        if (actualArg != "")
-        {
-            if (actualArg[0] == '\"' && actualArg[actualArg.size()-1] == '\"')
+            else if (options[i] == '-' && !open)
             {
-                actualArg = actualArg.substr(1,actualArg.size()-2);
+                readArgs = false;
+                readParam = false;
+                readOption = true;
+                readPos = i;
             }
-            split[actualOption].push_back(actualArg);
+            else if (options[i] == ' ' && readOption == true)
+            {
+                actualOption = options.substr(readPos+1,i-readPos-1);
+                split[actualOption] = {};
+                readOption = false;
+                readArgs = true;
+                readPos = i;
+            }
+            else if (options[i] == ' ' && readArgs && !open)
+            {
+                std::string arg = options.substr(readPos+1,i-readPos-1);
+                if (arg != "")
+                {
+                    if (arg[0] == '\"' && arg[arg.size()-1] == '\"')
+                    {
+                        arg = arg.substr(1,arg.size()-2);
+                    }
+                    split[actualOption].push_back(arg);
+                }
+                readPos = i;
+            }
+            else if (options[i] == '\"' && readArgs)
+            {
+                open = !open;
+            }
+        }
+        if (readParam)
+        {
+            split["param"].push_back(options.substr(readPos + ((readPos == 0) ? 0 : 1)));
+        }
+        else if (readOption)
+        {
+            split[options.substr(readPos+1)] = {};
+        }
+        else if (readArgs)
+        {
+            std::string arg = options.substr(readPos+1);
+            if (arg != "")
+            {
+                if (arg[0] == '\"' && arg[arg.size()-1] == '\"')
+                {
+                    arg = arg.substr(1,arg.size()-2);
+                }
+                split[actualOption].push_back(arg);
+            }
         }
     }
     return split;
